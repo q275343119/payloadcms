@@ -22,7 +22,7 @@ export default defineConfig({
   /* Shared settings for all the projects below. See https://playwright.dev/docs/api/class-testoptions. */
   use: {
     /* Base URL to use in actions like `await page.goto('/')`. */
-    // baseURL: 'http://localhost:3000',
+    baseURL: 'http://localhost:3000',
 
     /* Collect trace when retrying the failed test. See https://playwright.dev/docs/trace-viewer */
     trace: 'on-first-retry',
@@ -30,11 +30,17 @@ export default defineConfig({
   projects: [
     {
       name: 'chromium',
-      use: { ...devices['Desktop Chrome'], channel: 'chromium' },
+      use: { ...devices['Desktop Chrome'], channel: 'chrome' },
     },
   ],
   webServer: {
     command: 'pnpm dev',
+    env: {
+      ...process.env,
+      DATABASE_URL: process.env.DATABASE_URL || 'postgres://payload:payload@localhost:5432/payload',
+      PAYLOAD_SECRET: process.env.PAYLOAD_SECRET || 'playwright-test-secret',
+      SITE_URL: 'http://localhost:3000',
+    },
     reuseExistingServer: true,
     url: 'http://localhost:3000',
   },

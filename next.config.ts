@@ -1,28 +1,28 @@
 import { withPayload } from '@payloadcms/next/withPayload'
+import type { NextConfig } from 'next'
 
-/** @type {import('next').NextConfig} */
-const nextConfig = {
+const remotePatterns: NonNullable<NextConfig['images']>['remotePatterns'] = []
+
+if (process.env.R2_PUBLIC_URL) {
+  const mediaURL = new URL(process.env.R2_PUBLIC_URL)
+  remotePatterns.push({
+    hostname: mediaURL.hostname,
+    pathname: `${mediaURL.pathname.replace(/\/$/, '')}/**`,
+    port: mediaURL.port,
+    protocol: mediaURL.protocol.replace(':', '') as 'http' | 'https',
+  })
+}
+
+const nextConfig: NextConfig = {
   images: {
     localPatterns: [
       {
         pathname: '/api/media/file/**',
       },
     ],
+    remotePatterns,
   },
-  // Packages with Cloudflare Workers (workerd) specific code
-  // Read more: https://opennext.js.org/cloudflare/howtos/workerd
-  serverExternalPackages: ['jose', 'pg-cloudflare'],
-
-  // Your Next.js config here
-  webpack: (webpackConfig: any) => {
-    webpackConfig.resolve.extensionAlias = {
-      '.cjs': ['.cts', '.cjs'],
-      '.js': ['.ts', '.tsx', '.js', '.jsx'],
-      '.mjs': ['.mts', '.mjs'],
-    }
-
-    return webpackConfig
-  },
+  output: 'standalone',
 }
 
-export default withPayload(nextConfig, { devBundleServerPackages: false })
+export default withPayload(nextConfig)

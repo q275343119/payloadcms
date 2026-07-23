@@ -2,6 +2,7 @@
 
 # dependencies
 /node_modules
+/.pnpm-store
 /.pnp
 .pnp.js
 .yarn/install-state.gz
@@ -29,7 +30,9 @@ yarn-debug.log*
 yarn-error.log*
 
 # local env files
-.env*.local
+.env*
+!.env.example
+!test.env
 
 # vercel
 .vercel
@@ -48,7 +51,3 @@ node_modules/
 /playwright-report/
 /blob-report/
 /playwright/.cache/
-
-# OpenNext
-.open-next
-.wrangler
