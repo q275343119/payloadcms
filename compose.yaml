@@ -25,6 +25,6 @@ services:
     image: payload-blog:latest
     env_file:
       - .env.production
-    command: ['pnpm', 'migrate']
+    command: ['./node_modules/.bin/payload', 'migrate']
     profiles: ['tools']
     restart: 'no'
