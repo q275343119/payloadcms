@@ -7,6 +7,8 @@ services:
         R2_PUBLIC_URL: ${R2_PUBLIC_URL:?Run docker compose with --env-file .env.production}
     env_file:
       - .env.production
+    environment:
+      PORT: '3000'
     ports:
       - '127.0.0.1:${PORT:-3000}:3000'
     restart: unless-stopped
