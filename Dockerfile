@@ -22,7 +22,7 @@ ENV R2_SECRET_ACCESS_KEY=build-secret-key
 ENV SITE_URL=https://example.com
 COPY --from=dependencies /app/node_modules ./node_modules
 COPY . .
-RUN pnpm build
+RUN mkdir -p public && pnpm build
 
 FROM base AS runner
 ENV NODE_ENV=production
