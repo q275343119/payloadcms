@@ -102,15 +102,103 @@ Payload API 的其他站点；服务端调用不受浏览器 CORS 限制。
 
 ## Docker 部署
 
-首次发布：
+生产环境推荐使用“GitHub Actions 构建镜像，VPS 只负责拉取和运行”的方式。不要在低内存
+VPS 上执行 `docker build`。默认镜像地址为：
+
+```text
+ghcr.io/q275343119/payloadcms:latest
+```
+
+仓库的 `.github/workflows/docker-image.yml` 会在代码推送到 `main` 时构建
+`linux/amd64` 镜像，并发布两个标签：
+
+- `latest`：当前 `main` 的最新版
+- `sha-xxxxxxx`：对应具体 Git commit，可用于固定版本和回滚
+
+构建过程不需要数据库、Payload 或 R2 的生产配置。包括 `R2_PUBLIC_URL` 在内的全部实际
+配置都在容器启动时从 `.env.production` 读取，因此同一个镜像可以使用不同的数据库、
+站点域名和 R2 bucket。
+
+### 准备 GHCR 镜像
+
+公开镜像可以直接拉取。如果 GHCR package 保持私有，需要在 GitHub 创建仅具有
+`read:packages` 权限的 Personal Access Token，然后在 VPS 登录一次：
 
 ```bash
-docker compose --env-file .env.production build app
+read -rsp 'GHCR token: ' GHCR_TOKEN
+echo
+printf '%s' "$GHCR_TOKEN" | docker login ghcr.io \
+  --username YOUR_GITHUB_USERNAME \
+  --password-stdin
+unset GHCR_TOKEN
+```
+
+不要把 Token 写入仓库、Compose 文件或 `.env.production`。登录成功后，Docker 会使用
+本机凭据拉取私有镜像。
+
+### 准备 VPS
+
+VPS 只需要以下文件：
+
+- `compose.yaml`
+- `.env.production`
+- 可选的 `deploy/nginx.conf`
+
+安装 Docker Engine 和 Docker Compose v2，并确认服务器架构为 AMD64：
+
+```bash
+docker version
+docker compose version
+uname -m
+```
+
+`uname -m` 应返回 `x86_64`。然后在部署目录中创建 `.env.production`。除前文列出的
+生产配置外，还可以指定要部署的镜像：
+
+```dotenv
+PAYLOAD_IMAGE=ghcr.io/q275343119/payloadcms:latest
+
+DATABASE_URL=postgresql://USER:PASSWORD@HOST:5432/postgres
+PAYLOAD_SECRET=使用-openssl-rand-hex-32-生成
+SITE_URL=https://blog.example.com
+CORS_ORIGINS=
+PORT=3000
+
+R2_BUCKET=blog-media
+R2_ACCESS_KEY_ID=...
+R2_SECRET_ACCESS_KEY=...
+R2_ENDPOINT=https://ACCOUNT_ID.r2.cloudflarestorage.com
+R2_PUBLIC_URL=https://media.example.com
+```
+
+`.env.production` 包含生产密钥，文件权限建议限制为当前部署用户：
+
+```bash
+chmod 600 .env.production
+```
+
+### 首次部署
+
+进入包含 `compose.yaml` 和 `.env.production` 的目录，依次执行：
+
+```bash
+docker compose --env-file .env.production pull
 docker compose --env-file .env.production --profile tools run --rm migrate
-docker compose --env-file .env.production up -d app
+docker compose --env-file .env.production up -d --wait app
 docker compose --env-file .env.production ps
 curl --fail http://127.0.0.1:3000/api/health
 ```
+
+执行顺序不能颠倒：先拉取同一版本的应用和 migration 镜像，再运行数据库 migration，
+最后启动应用。接口返回以下内容表示应用和数据库均可访问：
+
+```json
+{ "status": "ok" }
+```
+
+首次打开 `https://你的域名/admin`，按照 Payload 页面创建管理员账号。
+
+### 配置 Nginx 和 HTTPS
 
 确认健康检查返回 `{"status":"ok"}` 后，将 `deploy/nginx.conf` 合并到服务器现有 Nginx，
 替换其中的域名，并使用 Certbot 或现有证书流程启用 HTTPS：
@@ -120,19 +208,75 @@ sudo nginx -t
 sudo systemctl reload nginx
 ```
 
-以后发布仍按以下顺序：
+应用端口默认只绑定到 `127.0.0.1`，不直接暴露到公网。Nginx 示例包含 25 MB 上传限制、
+原始 Host/IP/协议头和 120 秒代理超时。
 
-1. 确认 Supabase 备份可用。
-2. 拉取代码并构建新镜像。
-3. 运行一次性 migration 容器。
-4. 启动应用并等待健康检查。
-5. reload Nginx。
+### 发布新版本
 
-应用容器以非 root 用户运行，只将端口绑定到 `127.0.0.1`。Nginx 示例包含 25 MB
-上传限制、原始 Host/IP/协议头和 120 秒代理超时。
+代码推送到 `main` 后，先在 GitHub Actions 页面等待 **Build and publish Docker image**
+成功。然后在 VPS 执行：
 
-回滚应用时重新标记并启动上一镜像。数据库 migration 默认只向前执行；若新版本包含破坏性
-迁移，应先从 Supabase 备份恢复或在发布前验证对应 down migration。
+```bash
+docker compose --env-file .env.production pull
+docker compose --env-file .env.production --profile tools run --rm migrate
+docker compose --env-file .env.production up -d --wait app
+docker compose --env-file .env.production ps
+curl --fail http://127.0.0.1:3000/api/health
+```
+
+每次执行 migration 前都应确认 Supabase 备份可用。只更新应用镜像时不需要 reload
+Nginx。
+
+### 固定版本与回滚
+
+生产环境建议在确认版本稳定后，把 `.env.production` 中的 `PAYLOAD_IMAGE` 从 `latest`
+改成 Actions 生成的 SHA 标签：
+
+```dotenv
+PAYLOAD_IMAGE=ghcr.io/q275343119/payloadcms:sha-1a2b3c4
+```
+
+切换镜像版本：
+
+```bash
+docker compose --env-file .env.production pull
+docker compose --env-file .env.production up -d --wait app
+```
+
+镜像回滚不会自动回滚数据库。Payload migration 默认只向前执行；如果新版本包含破坏性
+迁移，应先确认旧应用是否兼容新 schema，必要时从 Supabase 备份恢复。
+
+确认新版本稳定后可以清理未使用的旧镜像：
+
+```bash
+docker image prune
+```
+
+### 常用排查
+
+查看容器和健康状态：
+
+```bash
+docker compose --env-file .env.production ps
+docker compose --env-file .env.production logs --tail=200 app
+```
+
+确认 Compose 最终使用的镜像：
+
+```bash
+docker compose --env-file .env.production config --images
+```
+
+常见问题：
+
+- `unauthorized` 或 `denied`：GHCR package 是私有的，或者 VPS 登录凭据缺少
+  `read:packages`。
+- `no matching manifest for linux/amd64`：工作流没有成功发布 AMD64 镜像。
+- `Missing required production environment variables`：`.env.production` 缺少日志中列出的
+  配置。
+- R2 图片无法访问：检查 `R2_PUBLIC_URL` 是否能从公网直接打开，以及 bucket 自定义域名
+  和 CORS 配置是否正确。
+- migration 失败：不要继续重启应用，先检查数据库连接、备份和 migration 日志。
 
 ## 给其他站点使用 CMS
 

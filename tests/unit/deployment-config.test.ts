@@ -74,6 +74,17 @@ describe('production compose configuration', () => {
     expect(compose).toContain("environment:\n      PORT: '3000'")
   })
 
+  it('pulls the published image instead of building on the production host', () => {
+    const compose = readFileSync(resolve(process.cwd(), 'compose.yaml'), 'utf8').replace(
+      /\r\n/g,
+      '\n',
+    )
+
+    expect(compose).toContain('image: ${PAYLOAD_IMAGE:-ghcr.io/q275343119/payloadcms:latest}')
+    expect(compose).toContain('pull_policy: always')
+    expect(compose).not.toContain('build:')
+  })
+
   it('runs migrations without invoking Corepack at runtime', () => {
     const compose = readFileSync(resolve(process.cwd(), 'compose.yaml'), 'utf8').replace(
       /\r\n/g,
