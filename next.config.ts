@@ -14,6 +14,9 @@ if (process.env.R2_PUBLIC_URL) {
 }
 
 const nextConfig: NextConfig = {
+  experimental: {
+    cpus: 1,
+  },
   images: {
     localPatterns: [
       {
@@ -23,6 +26,11 @@ const nextConfig: NextConfig = {
     remotePatterns,
   },
   output: 'standalone',
+  typescript: {
+    // `pnpm build` runs the full type check before Next starts, so Next only
+    // performs its lightweight TypeScript setup verification here.
+    ignoreBuildErrors: true,
+  },
 }
 
 export default withPayload(nextConfig)

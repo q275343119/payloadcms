@@ -6,7 +6,7 @@
   "packageManager": "pnpm@11.9.0",
   "type": "module",
   "scripts": {
-    "build": "cross-env NODE_OPTIONS=\"--no-deprecation --max-old-space-size=8000\" next build",
+    "build": "pnpm lint && pnpm typecheck && cross-env NODE_OPTIONS=--no-deprecation next build --no-lint",
     "dev": "cross-env NODE_OPTIONS=--no-deprecation next dev",
     "generate:importmap": "cross-env NODE_OPTIONS=--no-deprecation payload generate:importmap",
     "generate:types": "cross-env NODE_OPTIONS=--no-deprecation payload generate:types",
@@ -18,7 +18,8 @@
     "start": "cross-env NODE_OPTIONS=--no-deprecation next start",
     "test": "pnpm run test:int && pnpm run test:e2e",
     "test:e2e": "cross-env NODE_OPTIONS=\"--no-deprecation --import=tsx/esm\" DOTENV_CONFIG_PATH=test.env playwright test --config=playwright.config.ts",
-    "test:int": "cross-env NODE_OPTIONS=--no-deprecation DOTENV_CONFIG_PATH=test.env vitest run --config ./vitest.config.mts"
+    "test:int": "cross-env NODE_OPTIONS=--no-deprecation DOTENV_CONFIG_PATH=test.env vitest run --config ./vitest.config.mts",
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "@payloadcms/db-postgres": "3.82.1",
