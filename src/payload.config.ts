@@ -13,6 +13,7 @@ import { Media } from './collections/Media'
 import { Posts } from './collections/Posts'
 import { Users } from './collections/Users'
 import { SiteSettings } from './globals/SiteSettings'
+import { markdownConvertEndpoint } from './endpoints/markdown'
 import { getServerConfig } from './lib/env'
 
 const filename = fileURLToPath(import.meta.url)
@@ -39,6 +40,7 @@ export default buildConfig({
     push: process.env.NODE_ENV !== 'production',
   }),
   editor: lexicalEditor(),
+  endpoints: [markdownConvertEndpoint],
   experimental: {
     localizeStatus: true,
   },

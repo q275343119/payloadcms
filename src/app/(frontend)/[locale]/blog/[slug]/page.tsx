@@ -1,10 +1,10 @@
-import { RichText } from '@payloadcms/richtext-lexical/react'
 import type { Metadata } from 'next'
 import Image from 'next/image'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 
 import { SiteHeader } from '@/components/blog/SiteHeader'
+import { PostRichText } from '@/components/blog/PostRichText'
 import { getPostBySlug, getSiteSettings, getTranslationSlug } from '@/lib/blog'
 import { isLocale } from '@/lib/locales'
 import { formatPostDate, getMediaSource } from '@/lib/presentation'
@@ -113,7 +113,7 @@ export default async function BlogPost({ params }: Props) {
             ))}
           </aside>
           <div className="rich-text">
-            <RichText data={post.content} />
+            <PostRichText data={post.content} />
           </div>
         </div>
       </article>

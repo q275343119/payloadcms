@@ -2,6 +2,7 @@ import type { CollectionConfig } from 'payload'
 
 import { authenticated, authenticatedOrPublished } from '@/access'
 import { createSlugField } from '@/fields/slug'
+import { postContentEditor } from '@/lib/postContentEditor'
 
 export const Posts: CollectionConfig = {
   slug: 'posts',
@@ -33,8 +34,23 @@ export const Posts: CollectionConfig = {
     {
       name: 'content',
       type: 'richText',
+      editor: postContentEditor,
       localized: true,
       required: true,
+    },
+    {
+      name: 'markdownEditor',
+      type: 'ui',
+      admin: {
+        components: {
+          Field: {
+            clientProps: {
+              targetPath: 'content',
+            },
+            path: '/components/admin/MarkdownSourceEditor#MarkdownSourceEditor',
+          },
+        },
+      },
     },
     {
       name: 'heroImage',
