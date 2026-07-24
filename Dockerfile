@@ -11,13 +11,12 @@ COPY package.json pnpm-lock.yaml pnpm-workspace.yaml .npmrc ./
 RUN pnpm install --frozen-lockfile
 
 FROM base AS builder
-ARG R2_PUBLIC_URL=https://media.example.com
 ENV DATABASE_URL=postgres://payload:payload@127.0.0.1:5432/payload
 ENV PAYLOAD_SECRET=container-build-only-secret
 ENV R2_ACCESS_KEY_ID=build-access-key
 ENV R2_BUCKET=build-media
 ENV R2_ENDPOINT=https://example.r2.cloudflarestorage.com
-ENV R2_PUBLIC_URL=$R2_PUBLIC_URL
+ENV R2_PUBLIC_URL=https://media.example.com
 ENV R2_SECRET_ACCESS_KEY=build-secret-key
 ENV SITE_URL=https://example.com
 COPY --from=dependencies /app/node_modules ./node_modules

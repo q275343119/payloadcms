@@ -16,10 +16,32 @@ describe('production compose configuration', () => {
     expect(workflow).toContain('packages: write')
     expect(workflow).toContain('registry: ghcr.io')
     expect(workflow).toContain('platforms: linux/amd64')
-    expect(workflow).toContain('R2_PUBLIC_URL=${{ vars.R2_PUBLIC_URL }}')
     expect(workflow).toContain('type=raw,value=latest')
     expect(workflow).toContain('type=sha,prefix=sha-')
     expect(workflow).toContain('push: true')
+  })
+
+  it('keeps the R2 public URL configurable at container runtime', () => {
+    const dockerfile = readFileSync(resolve(process.cwd(), 'Dockerfile'), 'utf8').replace(
+      /\r\n/g,
+      '\n',
+    )
+    const nextConfig = readFileSync(resolve(process.cwd(), 'next.config.ts'), 'utf8').replace(
+      /\r\n/g,
+      '\n',
+    )
+    const workflow = readFileSync(
+      resolve(process.cwd(), '.github/workflows/docker-image.yml'),
+      'utf8',
+    ).replace(/\r\n/g, '\n')
+
+    expect(dockerfile).not.toContain('ARG R2_PUBLIC_URL')
+    expect(dockerfile).not.toContain('ENV R2_PUBLIC_URL=$R2_PUBLIC_URL')
+    expect(nextConfig).toContain('unoptimized: true')
+    expect(nextConfig).not.toContain('process.env.R2_PUBLIC_URL')
+    expect(nextConfig).not.toContain('remotePatterns')
+    expect(workflow).not.toContain('R2_PUBLIC_URL')
+    expect(workflow).not.toContain('build-args:')
   })
 
   it('keeps production builds within constrained container memory', () => {
